@@ -12,7 +12,7 @@ _CLIENT_ID = "hhUwyOpRS1SXlPryZTc7sLE2"
 _SCOPE = "declare upload"
 
 _HEADERS = {
-    "User-Agent": "HomeAssistant WeGlide Integration",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     "Origin": "https://weglide.org",
     "Referer": "https://weglide.org/",
 }
