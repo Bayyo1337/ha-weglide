@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -11,6 +13,16 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import WeGlideCoordinator
+
+
+def _parse_dt(raw: str | None) -> datetime | None:
+    """Parse an ISO 8601 datetime string to a timezone-aware datetime."""
+    if not raw:
+        return None
+    dt = datetime.fromisoformat(raw)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 async def async_setup_entry(
@@ -31,6 +43,8 @@ async def async_setup_entry(
             ClubSensor(coordinator),
             # Last flight sensors
             LastFlightDateSensor(coordinator),
+            LastFlightTakeoffTimeSensor(coordinator),
+            LastFlightLandingTimeSensor(coordinator),
             LastFlightDistanceSensor(coordinator),
             LastFlightPointsSensor(coordinator),
             LastFlightContestTypeSensor(coordinator),
@@ -210,6 +224,42 @@ class LastFlightDateSensor(_Base):
         return date.fromisoformat(raw) if raw else None
 
 
+class LastFlightTakeoffTimeSensor(_Base):
+    _attr_icon = "mdi:airplane-takeoff"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    @property
+    def unique_id(self) -> str:
+        return f"weglide_{self._user_id}_last_flight_takeoff_time"
+
+    @property
+    def name(self) -> str:
+        return f"{self._user().get('name', self._user_id)} Letzter Flug Startzeit"
+
+    @property
+    def native_value(self) -> datetime | None:
+        flight = self._flight()
+        return _parse_dt(flight.get("takeoff_time")) if flight else None
+
+
+class LastFlightLandingTimeSensor(_Base):
+    _attr_icon = "mdi:airplane-landing"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    @property
+    def unique_id(self) -> str:
+        return f"weglide_{self._user_id}_last_flight_landing_time"
+
+    @property
+    def name(self) -> str:
+        return f"{self._user().get('name', self._user_id)} Letzter Flug Landezeit"
+
+    @property
+    def native_value(self) -> datetime | None:
+        flight = self._flight()
+        return _parse_dt(flight.get("landing_time")) if flight else None
+
+
 class LastFlightDistanceSensor(_Base):
     _attr_icon = "mdi:ruler"
     _attr_native_unit_of_measurement = "km"
@@ -256,7 +306,7 @@ class LastFlightContestTypeSensor(_Base):
 
     @property
     def native_value(self) -> str | None:
-        return self._contest().get("name")
+        return self._contest().get("edited_name")
 
 
 class LastFlightDurationSensor(_Base):
