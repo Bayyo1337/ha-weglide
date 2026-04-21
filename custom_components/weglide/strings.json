@@ -11,9 +11,9 @@
       },
       "tracked_users": {
         "title": "WeGlide — Zu trackende Nutzer",
-        "description": "Nutzer-IDs kommagetrennt eingeben (z. B. 33337, 1307). Deine eigene ID wird vorausgefüllt.",
+        "description": "Nutzer-IDs kommagetrennt eingeben (z. B. 33337, 1307). Leerzeichen werden ignoriert. Deine eigene ID wird vorausgefüllt. Die WeGlide-User-ID findest du in der URL deines Profils: weglide.org/user/33337",
         "data": {
-          "tracked_user_ids": "Nutzer-IDs",
+          "tracked_user_ids": "Nutzer-IDs (kommagetrennt, z. B. 33337, 1307)",
           "scan_interval": "Aktualisierungsintervall (Minuten)"
         }
       }

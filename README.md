@@ -24,5 +24,5 @@ Tracks gliding statistics and last flight details for one or more [WeGlide](http
 |---|---|
 | E-Mail | Your WeGlide login email |
 | Password | Your WeGlide password |
-| User IDs | Comma-separated WeGlide user IDs to track (your own ID is pre-filled) |
+| User IDs | Comma-separated WeGlide user IDs to track (your own ID is pre-filled). Example: `33337, 1307`. Find a user's ID in their profile URL: `weglide.org/user/33337` |
 | Scan interval | Update interval in minutes (default: 30) |
