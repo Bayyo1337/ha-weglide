@@ -39,7 +39,8 @@ class WeGlideCoordinator(DataUpdateCoordinator[dict]):
             async with aiohttp.ClientSession() as session:
                 user = await self.client.get_user(session, self.user_id)
                 last_flight = await self.client.get_last_flight(session, self.user_id)
+                active_flight = await self.client.get_active_flight(session, self.user_id)
         except Exception as err:
             raise UpdateFailed(f"WeGlide update failed for user {self.user_id}: {err}") from err
 
-        return {"user": user, "last_flight": last_flight}
+        return {"user": user, "last_flight": last_flight, "active_flight": active_flight}

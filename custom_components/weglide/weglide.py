@@ -135,3 +135,30 @@ class WeGlideClient:
 
         flight_id = flights[0]["id"]
         return await self._get(session, f"/v1/flightdetail/{flight_id}")
+
+    async def get_active_flight(
+        self, session: aiohttp.ClientSession, user_id: int
+    ) -> dict | None:
+        """Return the in-progress flight list entry for today, or None.
+
+        Queries by takeoff_time (not scoring_date) so live/WeGlide-Connect flights
+        are included even before they are scored or have a landing_time.
+        Returns the raw flight list entry — NOT flightdetail — because flightdetail
+        may return 404 for flights that are still in progress.
+        """
+        from datetime import date as _date
+        today = _date.today().isoformat()
+        flights = await self._get(
+            session,
+            f"/v1/flight?user_id_in={user_id}&order_by=-takeoff_time&limit=5",
+        )
+        if not isinstance(flights, list):
+            return None
+        for flight in flights:
+            takeoff = flight.get("takeoff_time") or ""
+            if not takeoff.startswith(today):
+                # Flights are sorted newest-first; once we pass today we can stop
+                break
+            if flight.get("landing_time") is None:
+                return flight
+        return None
