@@ -25,6 +25,13 @@ def _parse_dt(raw: str | None) -> datetime | None:
     return dt
 
 
+_LAUNCH_KIND: dict[str, str] = {
+    "T": "Schlepp",
+    "W": "Winde",
+    "S": "Eigenstart",
+}
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -449,7 +456,10 @@ class LastFlightLaunchKindSensor(_Base):
     @property
     def native_value(self) -> str | None:
         flight = self._flight()
-        return flight.get("launch_kind") if flight else None
+        if not flight:
+            return None
+        raw = flight.get("launch_kind")
+        return _LAUNCH_KIND.get(raw, raw) if raw else None
 
 
 class LastFlightMaxAltGainSensor(_Base):
