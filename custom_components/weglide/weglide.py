@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any
 
 import aiohttp
+
+_LOGGER = logging.getLogger(__name__)
 
 BASE_URL = "https://api.weglide.org"
 _CLIENT_ID = "hhUwyOpRS1SXlPryZTc7sLE2"
@@ -53,9 +56,26 @@ class WeGlideClient:
         async with session.post(
             f"{BASE_URL}/v1/auth/token", data=form, headers=_HEADERS
         ) as resp:
-            if resp.status == 401 or resp.status == 400:
-                raise WeGlideAuthError("Invalid credentials")
-            resp.raise_for_status()
+            if resp.status == 403:
+                body = await resp.text()
+                _LOGGER.warning(
+                    "WeGlide auth blocked (403) — server rejected the request. "
+                    "Body: %s", body[:500]
+                )
+                raise WeGlideAuthError("Request blocked (403)")
+            if resp.status in (400, 401):
+                body = await resp.text()
+                _LOGGER.warning(
+                    "WeGlide auth failed (HTTP %s). Body: %s", resp.status, body[:500]
+                )
+                raise WeGlideAuthError(f"Invalid credentials (HTTP {resp.status})")
+            if not resp.ok:
+                body = await resp.text()
+                _LOGGER.warning(
+                    "WeGlide auth unexpected error (HTTP %s). Body: %s",
+                    resp.status, body[:500]
+                )
+                resp.raise_for_status()
             data = await resp.json()
 
         token: str = data["access_token"]
@@ -87,7 +107,11 @@ class WeGlideClient:
         try:
             await self._get_token(session)
             return True
-        except (WeGlideAuthError, aiohttp.ClientError):
+        except WeGlideAuthError as err:
+            _LOGGER.warning("WeGlide credential validation failed: %s", err)
+            return False
+        except aiohttp.ClientError as err:
+            _LOGGER.warning("WeGlide connection error during validation: %s", err)
             return False
 
     async def get_me(self, session: aiohttp.ClientSession) -> dict:
