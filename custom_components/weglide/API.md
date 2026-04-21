@@ -32,21 +32,7 @@ Antwort:
   "scope": "declare upload"
 }
 ```
-Token-Gültigkeitsdauer: **10 Tage** (`864000` Sekunden). Refresh-Token vorhanden.
-
-### Token widerrufen
-```
-POST /v1/auth/revoke
-```
-Kein Body, sendet vermutlich `Authorization: Bearer <token>`.
-
-### Weitere Auth-Endpoints
-| Endpoint | Beschreibung |
-|---|---|
-| `GET /v1/auth/authorize` | OAuth2 Authorization Code Flow |
-| `POST /v1/auth/authorize` | OAuth2 Authorization Code Flow |
-| `POST /v1/auth/logout` | Session beenden |
-| `POST /v1/auth/recover-password/{email}` | Passwort-Reset anfordern |
+Token-Gültigkeitsdauer: **10 Tage** (`864000` Sekunden).
 
 ---
 
@@ -56,33 +42,23 @@ Kein Body, sendet vermutlich `Authorization: Bearer <token>`.
 ```
 GET /v1/user/me
 ```
-Vollständiges Profil des eingeloggten Nutzers. Wichtige Felder aus dem `UserInDB`-Schema:
-
-| Feld | Typ | Beschreibung |
-|---|---|---|
-| `id` | int | Nutzer-ID |
-| `name` | str | Anzeigename |
-| `flight_count` | int | Gesamtanzahl Flüge |
-| `story_count` | int | Anzahl Stories |
-| `total_free_distance` | float | Gesamtdistanz (km) |
-| `total_flight_duration` | float | Gesamtflugzeit (Einheit unklar — vermutlich Sekunden) |
-| `avg_speed` | float | Durchschnittsgeschwindigkeit |
-| `avg_glide_speed` | float | Gleitgeschwindigkeit |
-| `avg_glide_detour` | float | Gleitweg-Umweg |
-| `home_airport` | object | Heimatflugplatz |
-| `club` | object | Verein |
-| `date_joined` | datetime | Beitrittsdatum |
-
-```
-GET /v1/user/me/simple
-```
-Vereinfachtes Profil (für Live-Kommentare genutzt).
 
 ### Nutzer nach ID
 ```
 GET /v1/user/{user_id}
 ```
-Öffentliches Profil (Schema `User` — wie `UserInDB` aber ohne `date_of_birth`, `email` etc.).
+Schema `User` — wichtige Felder:
+
+| Feld | Typ | Einheit |
+|---|---|---|
+| `id` | int | — |
+| `name` | str | — |
+| `flight_count` | int | — |
+| `total_free_distance` | float | km |
+| `total_flight_duration` | float | Sekunden |
+| `avg_speed` | float | km/h |
+| `avg_glide_speed` | float | km/h |
+| `club` | object | → `club.name` |
 
 ---
 
@@ -92,120 +68,94 @@ GET /v1/user/{user_id}
 ```
 GET /v1/flight
 ```
-Sehr flexibel filterbar. Für einen bestimmten Nutzer:
-```
-GET /v1/flight?user_id_in=<id>&order_by=-scoring_date&limit=25
-```
+Gibt `FlightRankList`-Objekte zurück (nicht `FlightDetail`!).
 
 Wichtige Query-Parameter:
 | Parameter | Beschreibung |
 |---|---|
 | `user_id_in` | Kommagetrennte Nutzer-IDs |
-| `scoring_date_start` | Von Datum (date) |
-| `scoring_date_end` | Bis Datum (date) |
-| `season_in` | Saison(en) |
-| `order_by` | Sortierung (z.B. `-scoring_date`) |
-| `skip` | Offset für Pagination |
+| `order_by` | `-scoring_date` (abgeschlossene Flüge) oder `-takeoff_time` (inkl. aktive!) |
+| `scoring_date_start` / `_end` | Datumsfilter |
 | `limit` | Anzahl Ergebnisse |
-| `include_story` | Boolean, Stories mitladen |
-| `include_stats` | Boolean, Statistiken mitladen |
+
+**Wichtig:** Aktive WeGlide-Connect-Flüge haben noch keine `scoring_date`. Für Live-Erkennung `order_by=-takeoff_time` verwenden.
+
+`FlightRankList`-Felder (relevant):
+- `id`, `takeoff_time`, `landing_time`, `scoring_date`
+- `contest` — **Objekt** (nicht Array wie in FlightDetail!)
+- `landing_time` ist `null` solange der Flug läuft
 
 ### Flugdetail
 ```
 GET /v1/flightdetail/{flight_id}
 ```
-Schema `FlightDetail`:
+**Achtung:** Kann 404 liefern für Flüge die noch aktiv sind.
 
-| Feld | Typ | Beschreibung |
+Schema `FlightDetail` (wichtige Felder):
+
+| Feld | Typ | Hinweis |
 |---|---|---|
-| `id` | int | Flug-ID |
-| `takeoff_time` | datetime | Startzeit |
-| `landing_time` | datetime | Landezeit |
-| `scoring_date` | date | Wertungsdatum |
-| `aircraft` | object | Flugzeug |
-| `sorted_contest` | array | Wertungsergebnisse (free, FAI, etc.) |
-| `task_score` | array | Aufgaben-Wertungen |
-| `achievement` | array | Errungenschaften dieses Flugs |
-| `airspace_violation` | array | Luftraumverletzungen |
-| `igc_file` | object | IGC-Datei-Info |
-| `bbox` | array[float] | Bounding Box [lon_min, lat_min, lon_max, lat_max] |
+| `takeoff_time` | datetime | ISO 8601 |
+| `landing_time` | datetime | ISO 8601, in der Praxis `null` bei aktivem Flug |
+| `scoring_date` | date | `null` bei aktivem Flug |
+| `contest` | array | **Heißt `contest`, nicht `sorted_contest` wie im Spec!** |
+| `total_seconds` | int | Flugdauer in Sekunden |
+| `launch_kind` | str\|null | Codes: `T`=Schlepp, `W`=Winde, `S`=Eigenstart |
+| `max_alt_gain` | int\|null | m |
+| `takeoff_airport` | object\|null | `{name, region}` |
+| `landing_airport` | object\|null | `{name}` (kein `region`!) |
+| `aircraft` | object\|null | `{name, ...}` |
+| `co_user` | object\|null | `{name, ...}` |
+| `co_user_name` | str\|null | Fallback wenn kein WeGlide-Account |
 
-`sorted_contest[0]` ist üblicherweise die Hauptwertung:
+`contest[0]` ist die Hauptwertung:
 - `points`: Punktzahl
 - `distance`: Distanz (km)
-- `speed`: Geschwindigkeit (km/h)
-- `edited_name`: Wertungsname (z.B. "free distance")
+- `speed`: km/h
+- `edited_name`: Wertungsname — **Feld heißt `edited_name`, nicht `name`!**
 
-### Feed
+### Aktiven Flug erkennen
 ```
-GET /v1/flight/feed?skip=0
+GET /v1/flight?user_id_in={id}&order_by=-takeoff_time&limit=5
 ```
-Soziale Timeline (Flüge von gefolgten Nutzern). Pagination per `skip` (Vielfaches von 25).
-
-### Aktivität
-```
-GET /v1/flight/activity?season=<year>
-```
-Flugaktivität für eine Saison (Jahr).
-
-### Flugtag
-```
-GET /v1/flightday?scoring_date=<YYYY-MM-DD>
-```
-Alle Flüge eines bestimmten Tages.
+Über die letzten 5 Einträge iterieren: `landing_time is None` + `takeoff_time` beginnt mit heutigem Datum → Flug ist aktiv. Kein `flightdetail`-Call nötig (und riskant für aktive Flüge).
 
 ---
 
-## Flugzeug
+## Live-Tracking
+
+### GPS-Positionen (Replay Bucket)
 ```
-GET /v1/aircraft/{id}?season=<year>&contest=free
-GET /v1/aircraft/simple/{id}
-GET /v1/aircraft
+GET /v1/fix/batch?time=<unix_timestamp>
 ```
-Schema `Aircraft`: id, name, double_seater, kind, sc_class, vintage, manufacturer, valid_igc_index, valid_dmst_index
+Gibt GPS-Positionen aller aktuell getrackten Flugzeuge für einen Zeitstempel zurück. Schema ist unspezifiziert (`{}`). Dient dem WeGlide-Kartenoverlay.
+
+### Verbundene Geräte (authentifiziert)
+```
+GET /v1/device/connected
+```
+Listet alle Geräte die mit dem eingeloggten Account verbunden sind.
+
+### Alle Geräte (OGN-Datenbank)
+```
+GET /v1/device
+```
+Gibt alle Geräte aus der OGN-Datenbank zurück (Schema `LiveDevice`):
+- `id`, `registration`, `competition_id`
+- `tracked`, `identified`, `excluded`
+- `aircraft` → `{id, name, sc_class, kind}`
 
 ---
 
-## Errungenschaften
-```
-GET /v1/achievement/user/{user_id}
-```
-Array von `AchievementWithBadge`:
-- `badge_id`, `points`, `value`, `flight_id`, `created`
-- `badge`: Badge-Objekt
+## Weitere Endpoints
 
----
-
-## Benachrichtigungen
-```
-GET /v1/notification
-```
-Benachrichtigungen des eingeloggten Nutzers (Schema nicht spezifiziert).
-
----
-
-## Task / Aufgaben
-```
-GET /v1/task/score/recent   — Letzte Aufgabenwertungen
-GET /v1/task/score          — Aufgabenwertungen mit Filtern
-GET /v1/task/competitions/today — Heutige Wettbewerbe
-```
-
----
-
-## Suche
-```
-POST /v1/search
-```
-Globale Suche (Nutzer, Flugplätze, Flugzeuge etc.).
-
----
-
-## Ranking
-```
-POST /v1/ranking
-```
-Ranglisten-Abfragen.
+| Endpoint | Beschreibung |
+|---|---|
+| `GET /v1/flightday?scoring_date=YYYY-MM-DD` | Alle Flüge eines Tages |
+| `GET /v1/flight/feed?skip=0` | Soziale Timeline |
+| `POST /v1/search` | Globale Suche |
+| `GET /v1/achievement/user/{user_id}` | Errungenschaften |
+| `GET /v1/notification` | Benachrichtigungen (auth) |
 
 ---
 
@@ -213,8 +163,11 @@ Ranglisten-Abfragen.
 
 | Spec sagt | Realität |
 |---|---|
-| `sorted_contest` (array) im flightdetail | Feld heißt `contest` (array) |
+| `sorted_contest` (array) im FlightDetail | Feld heißt `contest` (array) |
 | `contest` nicht im Feed-Flug | Feed-Flug hat `contest` als **Objekt** (kein Array) |
+| `contest.name` | Feld heißt `edited_name` |
+| `landing_time` non-nullable | Ist `null` für aktive Flüge |
+| `landing_airport` hat `region` | `AirportFlight` hat nur `id` + `name`, kein `region` |
 
 ## Einheiten (verifiziert)
 
@@ -226,8 +179,4 @@ Ranglisten-Abfragen.
 | `total_seconds` (flightdetail) | Sekunden |
 | `contest.distance` | km |
 | `contest.speed` | km/h |
-
-## Offene Fragen
-
-- **Refresh-Token-Endpoint**: Vermutlich `POST /v1/auth/token` mit `grant_type=refresh_token`.
-- **Live-Tracking**: Kein Live-Tracking-Endpoint sichtbar — vermutlich separater WebSocket-Service.
+| `max_alt_gain` | m |
