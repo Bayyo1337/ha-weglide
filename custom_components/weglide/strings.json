@@ -1,0 +1,44 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "WeGlide — Anmeldung",
+        "description": "WeGlide-Zugangsdaten eingeben.",
+        "data": {
+          "email": "E-Mail",
+          "password": "Passwort"
+        }
+      },
+      "tracked_users": {
+        "title": "WeGlide — Zu trackende Nutzer",
+        "description": "Nutzer-IDs kommagetrennt eingeben (z. B. 33337, 1307). Deine eigene ID wird vorausgefüllt.",
+        "data": {
+          "tracked_user_ids": "Nutzer-IDs",
+          "scan_interval": "Aktualisierungsintervall (Minuten)"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Ungültige Zugangsdaten.",
+      "invalid_user_id": "Eine oder mehrere Nutzer-IDs konnten nicht gefunden werden.",
+      "cannot_connect": "Verbindung zu WeGlide fehlgeschlagen."
+    },
+    "abort": {
+      "already_configured": "WeGlide ist bereits eingerichtet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "WeGlide — Einstellungen",
+        "data": {
+          "tracked_user_ids": "Nutzer-IDs (kommagetrennt)",
+          "scan_interval": "Aktualisierungsintervall (Minuten)"
+        }
+      }
+    },
+    "error": {
+      "invalid_user_id": "Eine oder mehrere Nutzer-IDs konnten nicht gefunden werden."
+    }
+  }
+}
