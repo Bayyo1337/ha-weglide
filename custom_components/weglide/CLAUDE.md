@@ -1,53 +1,63 @@
 # weglide — Claude Code guidance
 
-Bindet die WeGlide-Plattform (Gleitschirm- und Segelflug-Logbuch & Wertung) in Home Assistant ein. WeGlide ist eine REST-API (OpenAPI 3.1.0). Die vollständige API-Spezifikation liegt als `weglide-api.json` im gleichen Ordner.
+Bindet die WeGlide-Plattform (Gleitschirm- und Segelflug-Logbuch & Wertung) in Home Assistant ein.
 
-## Status
-
-Scaffold angelegt (`manifest.json`, `__init__.py`). API analysiert, Dokumentation in `API.md`. Implementierung noch nicht begonnen.
-
-## Geplante Architektur (noch nicht umgesetzt)
-
-Analog zu `../karlsruhe_termin`:
+## Dateistruktur
 
 | Datei | Rolle |
 |---|---|
 | `weglide.py` | Purer aiohttp API-Client, keine HA-Imports |
-| `coordinator.py` | `DataUpdateCoordinator` — pollt Nutzerdaten + letzten Flug |
-| `sensor.py` | Sensoren (Gesamtflüge, Gesamtdistanz, letzter Flug, ...) |
-| `config_flow.py` | Setup-UI (Email + Passwort, live Validierung) |
+| `coordinator.py` | `DataUpdateCoordinator` — ein Coordinator pro getracktem User |
+| `sensor.py` | 18 Sensoren pro Device (Profil + letzter Flug) |
+| `config_flow.py` | 2-Step Setup + OptionsFlow |
 | `const.py` | Konstanten und Defaults |
+| `API.md` | Vollständige Endpoint-Referenz (verifiziert) |
+| `weglide-api.json` | Originale OpenAPI 3.1.0 Spezifikation |
 
-## API-Zusammenfassung
+## Architektur
 
-- **Base URL**: `https://api.weglide.org` (noch zu verifizieren)
-- **Auth**: `POST /v1/auth/token` → Bearer Token (genaues Body-Format noch ungeklärt)
-- **Nutzer**: `GET /v1/user/me` — flight_count, total_free_distance, total_flight_duration, avg_speed
-- **Flüge**: `GET /v1/flight?user_id_in=<id>&order_by=-scoring_date&limit=1` — letzter Flug
-- **Flugdetail**: `GET /v1/flightdetail/{id}` — Punkte, Distanz, Zeit, Flugzeug
+- **1 Config Entry** = 1 WeGlide-Account (Email + Passwort)
+- **1 Device pro getracktem User** — User-IDs kommagetrennt in `tracked_user_ids`
+- **1 Coordinator pro User** — pollt `GET /v1/user/{id}` + letzten Flug
+- `hass.data[DOMAIN][entry_id]` = `{user_id: WeGlideCoordinator, ...}`
 
-Vollständige Endpoint-Liste und Schema-Details → `API.md`
+## Auth
 
-## Kandidaten für HA-Sensoren
+- `POST /v1/auth/token` — multipart/form-data
+- `client_id`: `hhUwyOpRS1SXlPryZTc7sLE2`
+- Token läuft nach 10 Tagen ab, wird im Client gecacht
+- **User-Agent muss Browser-String sein** — WeGlide-Server blockt sonst mit 403
 
-| Sensor | Quelle | Einheit |
+## Releases und Versioning
+
+- Jede Änderung die in HACS-Instanzen ankommen soll, braucht ein **GitHub Release** mit einem Versions-Tag (z.B. `v1.0.1`)
+- Die Version im Release-Tag muss mit `manifest.json` → `version` übereinstimmen
+- **Vor jedem Release `manifest.json` aktualisieren**
+
+### Breaking Changes
+
+Breaking Changes sind Änderungen, die eine manuelle Aktion vom Nutzer erfordern:
+
+| Art | Beispiele | Was tun |
 |---|---|---|
-| Gesamtanzahl Flüge | `user.flight_count` | Flüge |
-| Gesamtdistanz | `user.total_free_distance` | km |
-| Gesamtflugzeit | `user.total_flight_duration` | h (Einheit prüfen) |
-| Letzter Flug — Datum | `flight.scoring_date` | date |
-| Letzter Flug — Punkte | `flight.sorted_contest[0].points` | Punkte |
-| Letzter Flug — Distanz | `flight.sorted_contest[0].distance` | km |
-| Letzter Flug — Flugzeug | `flight.aircraft.name` | — |
+| Config-Schema-Änderung | Neues Pflichtfeld, umbenanntes Feld | Config Flow `VERSION` erhöhen + Migration schreiben (`async_migrate_entry`) |
+| Neue `unique_id`-Struktur | Sensor-IDs ändern sich | Alle bestehenden Entitäten werden als neu angelegt — in Release-Notes dokumentieren |
+| Entität entfernt/umbenannt | Sensor gelöscht oder key geändert | In Release-Notes: "Entität X entfernt, bitte Automationen anpassen" |
+| Neue Pflicht-Abhängigkeit | Neues `requirements`-Eintrag | Neuinstallation/Reload nötig — in Release-Notes vermerken |
 
-## Offene Fragen vor Implementierung
+### Release-Checkliste
 
-1. Auth-Body-Format für `/v1/auth/token` klären (Browser-DevTools)
-2. Base URL verifizieren
-3. Einheit von `total_flight_duration` klären
-4. Token-Gültigkeitsdauer — re-auth bei 401 oder proaktiv?
+1. `manifest.json` → `version` erhöhen (SemVer: `MAJOR.MINOR.PATCH`)
+2. Bei Breaking Changes: `config_flow.py` → `VERSION` erhöhen + `async_migrate_entry` in `__init__.py`
+3. GitHub Release erstellen mit Tag `v<version>`
+4. Release-Notes schreiben — Breaking Changes **fett** markieren, nötige Nutzeraktionen explizit nennen
+
+### Wann ist ein Reload nötig?
+
+- Neue Sensoren hinzugefügt → Reload der Integration reicht
+- Config-Schema geändert → Neu einrichten (oder Migration)
+- `requirements` geändert → HA-Neustart nötig
 
 ## Siehe auch
 
-- `API.md` — vollständige Endpoint-Referenz mit Parametern und Schemas
-- `weglide-api.json` — originale OpenAPI 3.1.0 Spezifikation
+- `API.md` — Endpoint-Referenz mit verifizierten Parametern und Einheiten
