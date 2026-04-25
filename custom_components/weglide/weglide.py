@@ -141,8 +141,9 @@ class WeGlideClient:
     ) -> dict | None:
         """Return the in-progress flight list entry for today, or None.
 
-        WeGlide Connect flights get scoring_date=today immediately on takeoff,
-        so filtering by today's scoring_date reliably includes live flights.
+        Active flights have no scoring_date yet, so scoring_date filters would
+        exclude them entirely. Query by takeoff_time instead and confirm the
+        flight started today before returning it.
         Returns the raw flight list entry — NOT flightdetail — because flightdetail
         may return 404 for flights that are still in progress.
         """
@@ -150,12 +151,12 @@ class WeGlideClient:
         today = _date.today().isoformat()
         flights = await self._get(
             session,
-            f"/v1/flight?user_id_in={user_id}&scoring_date_start={today}"
-            f"&scoring_date_end={today}&order_by=-scoring_date&limit=5",
+            f"/v1/flight?user_id_in={user_id}&order_by=-takeoff_time&limit=5",
         )
         if not isinstance(flights, list):
             return None
         for flight in flights:
-            if flight.get("landing_time") is None:
+            takeoff = flight.get("takeoff_time") or ""
+            if flight.get("landing_time") is None and takeoff.startswith(today):
                 return flight
         return None
