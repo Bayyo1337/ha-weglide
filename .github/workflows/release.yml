@@ -8,18 +8,14 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag name (e.g. v1.1.4)"
+        description: "Tag name (e.g. v1.2.0)"
         required: true
-        default: "v1.1.4"
+        default: "v1.2.0"
       body:
         description: "Release notes"
         required: true
         default: |
-          **Bugfix:** Am-Fliegen-Sensor blieb immer Aus, obwohl der Pilot flog.
-          Aktive Flüge haben keine scoring_date — der bisherige Filter schloss sie komplett aus. Fix: Abfrage jetzt per order_by=-takeoff_time + Prüfung auf heutiges takeoff_time-Datum.
-
-          **CI:** translations/en.json hinzugefügt (Hassfest), codeowner und render_readme in hacs.json/manifest.json ergänzt.
-
+          **Bugfix:** CI-Checks (Hassfest, HACS) repariert.
           **Upgrade:** Integration in Home Assistant neu laden.
 
 jobs:
@@ -38,6 +34,11 @@ jobs:
           VERSION=$(python3 -c "import json; print(json.load(open('custom_components/weglide/manifest.json'))['version'])")
           echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
 
+      - name: Read changelog from manifest version
+        if: github.event_name == 'push'
+        id: notes
+        run: echo "body=Release v$(python3 -c \"import json; print(json.load(open('custom_components/weglide/manifest.json'))['version'])\")" >> "$GITHUB_OUTPUT"
+
       - name: Create Release (auto on push)
         if: github.event_name == 'push'
         uses: actions/github-script@v7
@@ -50,14 +51,7 @@ jobs:
                 repo: context.repo.repo,
                 tag_name: tag,
                 name: tag,
-                body: [
-                  "**Bugfix:** Am-Fliegen-Sensor blieb immer Aus, obwohl der Pilot flog.",
-                  "Aktive Flüge haben keine scoring_date — der bisherige Filter schloss sie komplett aus. Fix: Abfrage jetzt per order_by=-takeoff_time + Prüfung auf heutiges takeoff_time-Datum.",
-                  "",
-                  "**CI:** translations/en.json hinzugefügt (Hassfest), codeowner und render_readme in hacs.json/manifest.json ergänzt.",
-                  "",
-                  "**Upgrade:** Integration in Home Assistant neu laden.",
-                ].join("\n"),
+                body: "${{ steps.notes.outputs.body }}",
                 draft: false,
                 prerelease: false,
                 target_commitish: context.sha,
