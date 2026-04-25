@@ -1,0 +1,44 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "WeGlide — Login",
+        "description": "Enter your WeGlide credentials.",
+        "data": {
+          "email": "E-Mail",
+          "password": "Password"
+        }
+      },
+      "tracked_users": {
+        "title": "WeGlide — Tracked Users",
+        "description": "Enter user IDs separated by commas (e.g. 33337, 1307). Spaces are ignored. Your own ID is pre-filled. Find a user's ID in their profile URL: weglide.org/user/33337",
+        "data": {
+          "tracked_user_ids": "User IDs (comma-separated, e.g. 33337, 1307)",
+          "scan_interval": "Update interval (minutes)"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid credentials.",
+      "invalid_user_id": "One or more user IDs could not be found.",
+      "cannot_connect": "Failed to connect to WeGlide."
+    },
+    "abort": {
+      "already_configured": "WeGlide is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "WeGlide — Settings",
+        "data": {
+          "tracked_user_ids": "User IDs (comma-separated)",
+          "scan_interval": "Update interval (minutes)"
+        }
+      }
+    },
+    "error": {
+      "invalid_user_id": "One or more user IDs could not be found."
+    }
+  }
+}
