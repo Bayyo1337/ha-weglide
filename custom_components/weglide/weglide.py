@@ -142,8 +142,9 @@ class WeGlideClient:
         """Return the in-progress flight list entry for today, or None.
 
         Active flights have no scoring_date yet, so scoring_date filters would
-        exclude them entirely. Query by takeoff_time instead and confirm the
-        flight started today before returning it.
+        exclude them entirely. order_by=-takeoff_time is not a valid API field
+        (returns 422); use order_by=-created instead, which puts newly created
+        flight records first. Confirm the flight started today via takeoff_time.
         Returns the raw flight list entry — NOT flightdetail — because flightdetail
         may return 404 for flights that are still in progress.
         """
@@ -151,7 +152,7 @@ class WeGlideClient:
         today = _date.today().isoformat()
         flights = await self._get(
             session,
-            f"/v1/flight?user_id_in={user_id}&order_by=-takeoff_time&limit=5",
+            f"/v1/flight?user_id_in={user_id}&order_by=-created&limit=5",
         )
         if not isinstance(flights, list):
             return None
