@@ -1,0 +1,11 @@
+{
+  "domain": "weglide",
+  "name": "WeGlide",
+  "codeowners": ["@Bayyo1337"],
+  "config_flow": true,
+  "documentation": "https://github.com/Bayyo1337/ha-weglide",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/Bayyo1337/ha-weglide/issues",
+  "requirements": ["aiohttp>=3.9.0"],
+  "version": "1.1.5"
+}
