@@ -22,7 +22,7 @@ Bindet die WeGlide-Plattform (Segelflug-Logbuch & Wertung) in Home Assistant ein
 - **1 Coordinator pro User** — pollt drei Dinge:
   - `GET /v1/user/{id}` → Profil
   - `GET /v1/flight?order_by=-scoring_date&limit=1` + `GET /v1/flightdetail/{id}` → letzter abgeschlossener Flug
-  - `GET /v1/flight?order_by=-takeoff_time&limit=5` → aktiver Flug (kein Flugdetail!)
+  - `GET /v1/flight?order_by=-created&limit=5` → aktiver Flug (kein Flugdetail!)
 - `hass.data[DOMAIN][entry_id]` = `{user_id: WeGlideCoordinator, ...}`
 - `coordinator.data` = `{"user": {...}, "last_flight": {...}|None, "active_flight": {...}|None}`
 
@@ -72,7 +72,8 @@ Bindet die WeGlide-Plattform (Segelflug-Logbuch & Wertung) in Home Assistant ein
 
 | Problem | Ursache | Fix |
 |---|---|---|
-| `Am Fliegen` immer `Aus` trotz aktivem Flug | Aktive Flüge haben noch keine `scoring_date` → `order_by=-scoring_date` überspringt sie | Separate Abfrage `order_by=-takeoff_time` in `get_active_flight()` |
+| `Am Fliegen` immer `Aus` trotz aktivem Flug | Aktive Flüge haben noch keine `scoring_date` → `scoring_date`-Filter schließt sie aus | Abfrage `order_by=-created&limit=5` (kein Datumsfilter) + Check `landing_time is None` + `takeoff_time` beginnt mit heute |
+| `order_by=-takeoff_time` → 422 | Kein gültiges Sortierfeld laut OpenAPI-Spec (`FlightOrder` kennt nur `scoring_date`, `created`) | `order_by=-created` verwenden |
 | Wertungstyp immer `unavailable` | Spec-Feld heißt `edited_name`, nicht `name` | `contest.get("edited_name")` |
 | `flightdetail` ggf. 404 für aktive Flüge | Flug noch nicht finalisiert | Aktiv-Check nutzt Flugliste, NICHT `flightdetail` |
 | `contest` vs `sorted_contest` | Spec sagt `sorted_contest`, API liefert `contest` | `flight.get("contest")` |

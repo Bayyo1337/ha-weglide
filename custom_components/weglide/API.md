@@ -74,7 +74,7 @@ Wichtige Query-Parameter:
 | Parameter | Beschreibung |
 |---|---|
 | `user_id_in` | Kommagetrennte Nutzer-IDs |
-| `order_by` | `-scoring_date` (abgeschlossene Flüge) oder `-takeoff_time` (inkl. aktive!) |
+| `order_by` | `-scoring_date`, `-created` (valide Werte lt. OpenAPI-Spec; `-takeoff_time` → 422!) |
 | `scoring_date_start` / `_end` | Datumsfilter |
 | `limit` | Anzahl Ergebnisse |
 
@@ -116,9 +116,11 @@ Schema `FlightDetail` (wichtige Felder):
 
 ### Aktiven Flug erkennen
 ```
-GET /v1/flight?user_id_in={id}&order_by=-takeoff_time&limit=5
+GET /v1/flight?user_id_in={id}&order_by=-created&limit=5
 ```
 Über die letzten 5 Einträge iterieren: `landing_time is None` + `takeoff_time` beginnt mit heutigem Datum → Flug ist aktiv. Kein `flightdetail`-Call nötig (und riskant für aktive Flüge).
+
+**Achtung:** `order_by=-takeoff_time` ist kein valides Sortierfeld → API antwortet mit 422. Valide Werte: `scoring_date`, `-scoring_date`, `created`, `-created`.
 
 ---
 
